@@ -539,57 +539,54 @@ let pitchMargin = 16; // Campo aproveita 100% da tela (sem barras pretas de torc
 const STADIUMS = [
     {
         id: 'maracana',
-        name: '☀️ MARACANÃ (SOL)',
+        name: '☀️ ARENA CLÁSSICA (VERDE)',
         type: 'classic',
         grassLight: '#27ae60',
         grassDark: '#1e824c',
-        line: 'rgba(255, 255, 255, 0.90)',
+        line: 'rgba(255, 255, 255, 0.92)',
+        hash: 'rgba(255, 255, 255, 0.65)',
         sidelineTrack: '#0f172a',
-        dirtTexture: false,
+        endZoneColor: '#15803d',
+        numColor: 'rgba(255, 255, 255, 0.75)',
         weather: 'clear'
     },
     {
         id: 'terrao',
-        name: '🏜️ TERRÃO DA VÁRZEA',
+        name: '🏜️ TERRÃO DOURADO (VÁRZEA)',
         type: 'dirt',
-        grassLight: '#9a582c',
-        grassDark: '#834720',
-        line: 'rgba(254, 243, 199, 0.70)',
-        sidelineTrack: '#542d14',
-        dirtTexture: true,
+        grassLight: '#d97706',
+        grassDark: '#b45309',
+        line: 'rgba(254, 243, 199, 0.90)',
+        hash: 'rgba(254, 243, 199, 0.55)',
+        sidelineTrack: '#78350f',
+        endZoneColor: '#b45309',
+        numColor: 'rgba(254, 243, 199, 0.80)',
         weather: 'dust'
     },
     {
-        id: 'chuva',
-        name: '🌧️ CLÁSSICO NA TEMPESTADE',
-        type: 'rain',
-        grassLight: '#145c32',
-        grassDark: '#0d4022',
-        line: 'rgba(255, 255, 255, 0.75)',
-        sidelineTrack: '#071d10',
-        dirtTexture: false,
-        weather: 'rain'
-    },
-    {
         id: 'inverno',
-        name: '❄️ CHAMPIONS NA NEVE',
+        name: '❄️ ARENA DE INVERNO (GELO AZUL)',
         type: 'snow',
-        grassLight: '#e0f2fe',
-        grassDark: '#bae6fd',
-        line: '#f97316', // Linhas laranjas de inverno europeu!
-        sidelineTrack: '#0284c7',
-        dirtTexture: false,
+        grassLight: '#0ea5e9',
+        grassDark: '#0284c7',
+        line: 'rgba(255, 255, 255, 0.95)',
+        hash: 'rgba(224, 242, 254, 0.70)',
+        sidelineTrack: '#082f49',
+        endZoneColor: '#0369a1',
+        numColor: 'rgba(255, 255, 255, 0.85)',
         weather: 'snow'
     },
     {
         id: 'final',
-        name: '🏆 GRANDE FINAL DE GALA',
+        name: '🏆 ESTÁDIO DOS CAMPEÕES (NOTURNO)',
         type: 'final',
-        grassLight: '#22c55e',
-        grassDark: '#15803d',
-        line: '#fef08a', // Linhas douradas de decisão!
-        sidelineTrack: '#0f172a',
-        dirtTexture: false,
+        grassLight: '#047857',
+        grassDark: '#064e3b',
+        line: 'rgba(254, 240, 138, 0.95)',
+        hash: 'rgba(254, 240, 138, 0.65)',
+        sidelineTrack: '#022c22',
+        endZoneColor: '#065f46',
+        numColor: 'rgba(254, 240, 138, 0.85)',
         weather: 'final'
     }
 ];
@@ -617,8 +614,8 @@ const camera = {
 
 // Helpers dinâmicos das melhorias do jogador
 function getSlowDrainRate() {
-    // Drena em ~1.7s (rápido e tenso, estilo Touchdown Hero)
-    return Math.max(38, 58 - (profile.upgrades.slow - 1) * 4.5);
+    // Drena em ~1.3s (rápido e tenso, estilo Touchdown Hero)
+    return Math.max(52, 74 - (profile.upgrades.slow - 1) * 5.0);
 }
 function getSlowRecoveryRate() {
     return 36 + (profile.upgrades.slow - 1) * 6;
@@ -1598,13 +1595,170 @@ function addConfetti(count = 90) {
     }
 }
 
+// Sequência de desarme cômico e partículas Touchdown Hero
+let tackleTimer = 0;
+let tackleTumbleAngle = 0;
+let looseBall = { x: 0, y: 0, vx: 0, vy: 0, rot: 0 };
+
+function addCartoonTacklePuff(x, y) {
+    const count = 12;
+    for (let i = 0; i < count; i++) {
+        const angle = (i * Math.PI * 2) / count + (Math.random() - 0.5) * 0.4;
+        const spd = Math.random() * 95 + 45;
+        particles.push({
+            type: 'cartoon_puff',
+            x: x + Math.cos(angle) * 10,
+            y: y + Math.sin(angle) * 10,
+            vx: Math.cos(angle) * spd,
+            vy: Math.sin(angle) * spd - 20,
+            size: Math.random() * 8 + 14,
+            growth: 32,
+            color: '#ffffff',
+            strokeColor: '#0f172a',
+            life: 0.65,
+            decay: 1.5
+        });
+    }
+}
+
+function addComicPowBurst(x, y) {
+    const texts = ['POW!', 'WHAM!', 'BOOM!', 'DESARME!'];
+    const chosenText = texts[Math.floor(Math.random() * texts.length)];
+    particles.push({
+        type: 'comic_burst',
+        x: x,
+        y: y,
+        text: chosenText,
+        scale: 0.2,
+        targetScale: 1.25,
+        rotation: (Math.random() - 0.5) * 0.4,
+        life: 0.75,
+        decay: 1.3
+    });
+}
+
+function addTackleDizzyStars(x, y) {
+    particles.push({
+        type: 'floating_skull',
+        x: x,
+        y: y - 10,
+        vy: -45,
+        life: 0.85,
+        decay: 1.1
+    });
+
+    for (let i = 0; i < 3; i++) {
+        particles.push({
+            type: 'orbit_star',
+            cx: x,
+            cy: y - 14,
+            orbitAngle: (i * Math.PI * 2) / 3,
+            orbitRadius: 20,
+            life: 0.85,
+            decay: 1.1
+        });
+    }
+}
+
+function triggerTackle(d) {
+    if (gameState !== STATE.RUNNING) return;
+    gameState = STATE.TACKLED;
+    tackleTimer = 0.85;
+    tackleTumbleAngle = 0;
+
+    looseBall.x = player.x;
+    looseBall.y = player.y + 10;
+    looseBall.vx = (player.x < (d ? d.x : player.x) ? -1 : 1) * (Math.random() * 80 + 70);
+    looseBall.vy = -180;
+    looseBall.rot = 0;
+
+    triggerHaptic('crash');
+    screenShake = 22;
+
+    audio.playTackleImpact();
+    audio.playWhistle(true);
+
+    addCartoonTacklePuff(player.x, player.y);
+    addComicPowBurst(player.x, player.y - 12);
+    addTackleDizzyStars(player.x, player.y - 30);
+}
+
 function updateParticles(dt) {
     for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         const decay = p.decay !== undefined ? p.decay : 1.2;
         p.life -= decay * dt;
 
-        if (p.type === 'text') {
+        if (p.type === 'cartoon_puff') {
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.size += p.growth * dt;
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, p.life * 1.2);
+            ctx.fillStyle = p.color;
+            ctx.strokeStyle = p.strokeColor;
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+        } else if (p.type === 'comic_burst') {
+            p.scale += (p.targetScale - p.scale) * Math.min(1, 16 * dt);
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rotation);
+            ctx.scale(p.scale, p.scale);
+            ctx.globalAlpha = Math.max(0, p.life * 1.3);
+
+            // Estrela pontiaguda de impacto cartoon
+            ctx.beginPath();
+            const spikes = 12;
+            const outerR = 36;
+            const innerR = 18;
+            for (let s = 0; s < spikes * 2; s++) {
+                const r = s % 2 === 0 ? outerR : innerR;
+                const a = (s * Math.PI) / spikes;
+                const sx = Math.cos(a) * r;
+                const sy = Math.sin(a) * r;
+                if (s === 0) ctx.moveTo(sx, sy);
+                else ctx.lineTo(sx, sy);
+            }
+            ctx.closePath();
+            ctx.fillStyle = '#facc15';
+            ctx.fill();
+            ctx.strokeStyle = '#dc2626';
+            ctx.lineWidth = 3.5;
+            ctx.stroke();
+
+            // Texto de impacto
+            ctx.font = '900 18px var(--head), sans-serif';
+            ctx.fillStyle = '#0f172a';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(p.text, 0, 0);
+            ctx.restore();
+        } else if (p.type === 'floating_skull') {
+            p.y += p.vy * dt;
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, p.life * 1.2);
+            ctx.font = '22px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('☠️', p.x, p.y);
+            ctx.restore();
+        } else if (p.type === 'orbit_star') {
+            p.orbitAngle += 8 * dt;
+            const ox = p.cx + Math.cos(p.orbitAngle) * p.orbitRadius;
+            const oy = p.cy + Math.sin(p.orbitAngle) * (p.orbitRadius * 0.45);
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, p.life);
+            ctx.fillStyle = '#facc15';
+            ctx.strokeStyle = '#b45309';
+            ctx.lineWidth = 1.2;
+            drawMiniStar(ctx, ox, oy, 6.5);
+            ctx.restore();
+        } else if (p.type === 'text') {
             p.y += p.vy * dt;
             ctx.save();
             ctx.globalAlpha = Math.max(0, p.life);
@@ -1715,53 +1869,64 @@ function drawTurfSkids(dt) {
 // =========================================================
 function drawPitch(dt = 0.016) {
     const stadium = getCurrentStadium();
+    const anchorY = Math.round(height * 0.72);
 
     // Margens ampliadas para suportar o zoom-out (campo aberto) sem cortes
     const extLeft = -width * 0.8;
     const extRight = fieldWidth + width * 0.8;
-    const extTop = player.y - height * 1.6;
-    const extBottom = player.y + height * 1.6;
+    const extTop = anchorY - height * 1.6;
+    const extBottom = anchorY + height * 1.6;
     const fullW = extRight - extLeft;
     const fullH = extBottom - extTop;
 
-    // 1. FUNDO GERAL DO ESTÁDIO
-    ctx.fillStyle = stadium.grassDark;
-    ctx.fillRect(extLeft, extTop, fullW, fullH);
-
-    // 2. GRAMADO JOGÁVEL ENTRE AS LINHAS LATERAIS
     const pitchLeft = fieldMargin;
     const pitchRight = fieldWidth - fieldMargin;
     const pitchW = pitchRight - pitchLeft;
 
-    // Faixas verticais de corte de grama (mower stripes)
-    const stripeCount = 6;
-    const stripeW = pitchW / stripeCount;
-    for (let i = 0; i < stripeCount; i++) {
-        if (i % 2 === 0) {
-            ctx.fillStyle = stadium.grassLight;
-            ctx.fillRect(pitchLeft + i * stripeW, extTop, stripeW, fullH);
+    // Paleta dinâmica: no Slow-Mo entra a Prancheta Tática Chalkboard!
+    const bgDark = isSlowMo ? '#0f172a' : stadium.grassDark;
+    const bgLight = isSlowMo ? '#131e33' : stadium.grassLight;
+    const touchlineColor = isSlowMo ? 'rgba(248, 250, 252, 0.75)' : stadium.line;
+
+    // 1. FUNDO GERAL
+    ctx.fillStyle = bgDark;
+    ctx.fillRect(extLeft, extTop, fullW, fullH);
+
+    // 2. FAIXAS HORIZONTAIS RETRÔ TOUCHDOWN HERO
+    const stripeH = 65;
+    const scrollOffset = (fieldY % (stripeH * 2));
+    const startY = Math.floor(extTop / stripeH) * stripeH - stripeH * 2;
+    for (let y = startY + scrollOffset; y < extBottom + stripeH * 2; y += stripeH) {
+        const idx = Math.floor((y - fieldY) / stripeH);
+        ctx.fillStyle = (Math.abs(idx) % 2 === 1) ? bgLight : bgDark;
+        ctx.fillRect(pitchLeft, y, pitchW, stripeH);
+    }
+
+    // Grid tático sutil em Slow-Mo
+    if (isSlowMo) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.035)';
+        ctx.lineWidth = 1;
+        for (let gx = pitchLeft; gx <= pitchRight; gx += 40) {
+            ctx.beginPath();
+            ctx.moveTo(gx, extTop);
+            ctx.lineTo(gx, extBottom);
+            ctx.stroke();
         }
     }
 
-    // Faixas horizontais com parallax sutil do rolo
-    const mowingSpacing = 140;
-    const mowOffset = (fieldY % mowingSpacing);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.035)';
-    for (let y = extTop + mowOffset; y < extBottom; y += mowingSpacing) {
-        ctx.fillRect(pitchLeft, y, pitchW, mowingSpacing * 0.45);
+    // Textura temática do estádio (na corrida normal)
+    if (!isSlowMo) {
+        drawPitchDetails(stadium, pitchLeft, pitchW, extTop, fullH);
     }
 
-    // Textura temática do gramado (várzea, neve, chuva)
-    drawPitchDetails(stadium, pitchLeft, pitchW, extTop, fullH);
-
-    // Marcas dinâmicas de carrinho / escorregões no gramado
+    // Marcas de derrapagem
     drawTurfSkids(dt);
 
-    // Linhas transversais de metragem (a cada 25m) com números stencil (estilo Touchdown Hero)
+    // Linhas transversais com hashes e números verticais
     drawMeterChalkLines(stadium, pitchLeft, pitchRight);
 
     // Linhas laterais brancas contínuas (touchlines)
-    ctx.strokeStyle = stadium.line;
+    ctx.strokeStyle = touchlineColor;
     ctx.lineWidth = 3.5;
     ctx.beginPath();
     ctx.moveTo(pitchLeft, extTop);
@@ -1770,20 +1935,24 @@ function drawPitch(dt = 0.016) {
     ctx.lineTo(pitchRight, extBottom);
     ctx.stroke();
 
-    // Faixa de celebração da End Zone aos 1000m
-    const goalLineY = player.y - (STAGE_GOAL_METERS - stageDist) * PIXELS_PER_METER;
-    if (goalLineY > extTop - 100 && goalLineY < extBottom + 100) {
+    // Faixa de End Zone de celebração aos 1000m
+    const goalLineY = anchorY - (STAGE_GOAL_METERS - stageDist) * PIXELS_PER_METER;
+    if (goalLineY > extTop - 180 && goalLineY < extBottom + 180) {
         drawEndZoneCelebration(goalLineY, stage, stadium, pitchLeft, pitchW);
     }
 
-    // Painéis de LED Digital nas laterais
-    drawLedBoards(pitchLeft, pitchRight, extTop, fullH);
-
-    // Arquibancadas e Torcida vibrando
-    drawBleachersAndCrowd(pitchLeft, pitchRight, extTop, fullH, stadium);
-
-    // Efeitos climáticos (chuva, neve, terra, final)
-    drawWeather(stadium, dt);
+    // Painéis de LED e arquibancadas (esmaecidos em Slow-Mo para foco na tática)
+    if (isSlowMo) {
+        ctx.save();
+        ctx.globalAlpha = 0.35;
+        drawLedBoards(pitchLeft, pitchRight, extTop, fullH);
+        drawBleachersAndCrowd(pitchLeft, pitchRight, extTop, fullH, stadium);
+        ctx.restore();
+    } else {
+        drawLedBoards(pitchLeft, pitchRight, extTop, fullH);
+        drawBleachersAndCrowd(pitchLeft, pitchRight, extTop, fullH, stadium);
+        drawWeather(stadium, dt);
+    }
 }
 
 function drawPitchDetails(stadium, pitchLeft, pitchW, extTop, fullH) {
@@ -1819,55 +1988,79 @@ function drawPitchDetails(stadium, pitchLeft, pitchW, extTop, fullH) {
 
 function drawMeterChalkLines(stadium, pitchLeft, pitchRight) {
     ctx.save();
+    const anchorY = Math.round(height * 0.72);
     const visibleRangeMeters = (height * 1.6) / PIXELS_PER_METER;
     const minM = Math.max(0, Math.floor((stageDist - visibleRangeMeters) / 25) * 25);
     const maxM = Math.min(STAGE_GOAL_METERS - 1, Math.ceil((stageDist + visibleRangeMeters) / 25) * 25);
+    const centerX = (pitchLeft + pitchRight) / 2;
+
+    const baseLineColor = isSlowMo ? 'rgba(248, 250, 252, 0.75)' : (stadium.line || 'rgba(255, 255, 255, 0.90)');
+    const hashColor = isSlowMo ? 'rgba(248, 250, 252, 0.45)' : (stadium.hash || 'rgba(255, 255, 255, 0.55)');
+    const numColor = isSlowMo ? 'rgba(248, 250, 252, 0.80)' : (stadium.numColor || 'rgba(255, 255, 255, 0.75)');
 
     for (let m = minM; m <= maxM; m += 25) {
         if (m === 0) continue;
-        const lineY = player.y - (m - stageDist) * PIXELS_PER_METER;
+        const lineY = anchorY - (m - stageDist) * PIXELS_PER_METER;
 
-        // 1. Linha transversal de cal branca a cada 25m
-        ctx.strokeStyle = stadium.id === 'snow' ? 'rgba(255, 120, 40, 0.9)' : 'rgba(255, 255, 255, 0.75)';
-        ctx.lineWidth = 2.5;
+        // 1. Linha contínua a cada 25m
+        ctx.strokeStyle = baseLineColor;
+        ctx.lineWidth = 3.0;
         ctx.beginPath();
         ctx.moveTo(pitchLeft, lineY);
         ctx.lineTo(pitchRight, lineY);
         ctx.stroke();
 
-        // 2. Hash marks menores a cada 5m
+        // 2. 4 Hashes intermediários (com marcas centrais Touchdown Hero)
         for (let sub = 5; sub < 25; sub += 5) {
             const subM = m - sub;
             if (subM > 0) {
-                const subY = player.y - (subM - stageDist) * PIXELS_PER_METER;
-                ctx.strokeStyle = stadium.id === 'snow' ? 'rgba(255, 120, 40, 0.5)' : 'rgba(255, 255, 255, 0.45)';
-                ctx.lineWidth = 2;
+                const subY = anchorY - (subM - stageDist) * PIXELS_PER_METER;
+                ctx.strokeStyle = hashColor;
+                ctx.lineWidth = 2.2;
+
+                // Ticks laterais
                 ctx.beginPath();
                 ctx.moveTo(pitchLeft, subY);
-                ctx.lineTo(pitchLeft + 12, subY);
-                ctx.moveTo(pitchRight - 12, subY);
+                ctx.lineTo(pitchLeft + 14, subY);
+                ctx.moveTo(pitchRight - 14, subY);
                 ctx.lineTo(pitchRight, subY);
+                ctx.stroke();
+
+                // Hashes centrais grossos
+                ctx.beginPath();
+                ctx.moveTo(centerX - 30, subY);
+                ctx.lineTo(centerX - 18, subY);
+                ctx.moveTo(centerX + 18, subY);
+                ctx.lineTo(centerX + 30, subY);
                 ctx.stroke();
             }
         }
 
-        // 3. Números Stencil Atléticos pintados na grama (estilo Touchdown Hero)
-        const numText = `${m}m`;
-        ctx.font = '900 18px var(--head), sans-serif';
-        ctx.fillStyle = stadium.id === 'snow' ? 'rgba(255, 120, 40, 0.85)' : 'rgba(255, 255, 255, 0.70)';
+        // 3. Escudo Retrô de Meio-Campo aos 500m
+        if (m === 500) {
+            drawMidfieldEmblem(stadium, pitchLeft, pitchRight, lineY);
+        }
+
+        // 4. Números estêncil verticais com setas ▲
+        ctx.font = '900 20px var(--head), sans-serif';
+        ctx.fillStyle = numColor;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        // Lado Esquerdo
         ctx.save();
-        ctx.translate(pitchLeft + 36, lineY);
-        ctx.fillText(`▲ ${numText}`, 0, 0);
+        ctx.translate(pitchLeft + 38, lineY);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+        ctx.fillText(`▲ ${m}m`, 1, 1);
+        ctx.fillStyle = numColor;
+        ctx.fillText(`▲ ${m}m`, 0, 0);
         ctx.restore();
 
-        // Lado Direito
         ctx.save();
-        ctx.translate(pitchRight - 36, lineY);
-        ctx.fillText(`${numText} ▲`, 0, 0);
+        ctx.translate(pitchRight - 38, lineY);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+        ctx.fillText(`${m}m ▲`, 1, 1);
+        ctx.fillStyle = numColor;
+        ctx.fillText(`${m}m ▲`, 0, 0);
         ctx.restore();
     }
     ctx.restore();
@@ -1985,29 +2178,161 @@ function drawBleachersAndCrowd(pitchLeft, pitchRight, extTop, fullH, stadium) {
     ctx.restore();
 }
 
-function drawEndZoneCelebration(lineY, currentStage, stadium, pitchLeft, pitchW) {
-    ctx.save();
-    ctx.fillStyle = stadium.id === 'final' ? 'rgba(250, 204, 21, 0.90)' : 'rgba(22, 163, 74, 0.90)';
-    ctx.fillRect(pitchLeft, lineY - 32, pitchW, 64);
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 3.5;
-    ctx.strokeRect(pitchLeft, lineY - 32, pitchW, 64);
-
-    const sqSize = 16;
-    const cols = Math.floor(pitchW / sqSize);
-    for (let c = 0; c < cols; c++) {
-        ctx.fillStyle = c % 2 === 0 ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.85)';
-        ctx.fillRect(pitchLeft + c * sqSize, lineY + 18, sqSize, 12);
-        ctx.fillRect(pitchLeft + c * sqSize, lineY - 30, sqSize, 12);
+function drawMiniStar(c, cx, cy, r) {
+    c.save();
+    c.beginPath();
+    for (let i = 0; i < 5; i++) {
+        const a = (i * Math.PI * 2) / 5 - Math.PI / 2;
+        const aInner = a + Math.PI / 5;
+        const px = cx + Math.cos(a) * r;
+        const py = cy + Math.sin(a) * r;
+        const inX = cx + Math.cos(aInner) * (r * 0.45);
+        const inY = cy + Math.sin(aInner) * (r * 0.45);
+        if (i === 0) c.moveTo(px, py);
+        else c.lineTo(px, py);
+        c.lineTo(inX, inY);
     }
+    c.closePath();
+    c.fill();
+    c.stroke();
+    c.restore();
+}
 
+function drawMidfieldEmblem(stadium, pitchLeft, pitchRight, lineY) {
+    ctx.save();
+    const centerX = (pitchLeft + pitchRight) / 2;
+    ctx.translate(centerX, lineY);
+    ctx.globalAlpha = isSlowMo ? 0.35 : 0.85;
+
+    // Círculo central do gramado
+    ctx.strokeStyle = isSlowMo ? 'rgba(248, 250, 252, 0.6)' : (stadium.line || '#ffffff');
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, 80, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Fundo do escudo
+    ctx.fillStyle = isSlowMo ? 'rgba(30, 41, 59, 0.7)' : 'rgba(15, 23, 42, 0.65)';
+    ctx.beginPath();
+    ctx.moveTo(0, -48);
+    ctx.lineTo(40, -32);
+    ctx.lineTo(34, 18);
+    ctx.quadraticCurveTo(0, 52, 0, 52);
+    ctx.quadraticCurveTo(0, 52, -34, 18);
+    ctx.lineTo(-40, -32);
+    ctx.closePath();
+    ctx.fill();
+
+    // Borda do escudo
+    ctx.strokeStyle = isSlowMo ? 'rgba(255, 255, 255, 0.7)' : '#facc15';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Estrelas douradas
+    ctx.fillStyle = isSlowMo ? '#ffffff' : '#facc15';
+    ctx.strokeStyle = '#b45309';
+    [-22, 0, 22].forEach((sx, idx) => {
+        const sy = -56 - (idx === 1 ? 4 : 0);
+        drawMiniStar(ctx, sx, sy, idx === 1 ? 7 : 5.5);
+    });
+
+    // Bola clássica
     ctx.fillStyle = '#ffffff';
-    ctx.font = '900 22px var(--head), sans-serif';
+    ctx.beginPath();
+    ctx.arc(0, -4, 18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    for (let a = 0; a < 5; a++) {
+        const angle = (a * Math.PI * 2) / 5 - Math.PI / 2;
+        const px = Math.cos(angle) * 7;
+        const py = -4 + Math.sin(angle) * 7;
+        if (a === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    // Letreiro do Meio-Campo
+    ctx.fillStyle = isSlowMo ? '#ffffff' : '#facc15';
+    ctx.font = '900 13px var(--head), sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-    ctx.shadowBlur = 8;
-    ctx.fillText(`⚽ GOL! FASE ${currentStage} ⚽`, pitchLeft + pitchW / 2, lineY);
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    ctx.shadowBlur = 4;
+    ctx.fillText('500m • CRAQUE', 0, 32);
+
+    ctx.restore();
+}
+
+function drawEndZoneCelebration(lineY, currentStage, stadium, pitchLeft, pitchW) {
+    ctx.save();
+    const ezH = 140;
+    const ezTop = lineY - ezH;
+
+    // Fundo vibrante
+    ctx.fillStyle = isSlowMo ? '#131e33' : (stadium.endZoneColor || '#15803d');
+    ctx.fillRect(pitchLeft, ezTop, pitchW, ezH);
+
+    // Faixas diagonais
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(pitchLeft, ezTop, pitchW, ezH);
+    ctx.clip();
+    ctx.strokeStyle = isSlowMo ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.15)';
+    ctx.lineWidth = 14;
+    for (let lx = pitchLeft - ezH; lx < pitchLeft + pitchW + ezH; lx += 36) {
+        ctx.beginPath();
+        ctx.moveTo(lx, ezTop);
+        ctx.lineTo(lx + ezH, ezTop + ezH);
+        ctx.stroke();
+    }
+    ctx.restore();
+
+    // Linhas de borda
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(pitchLeft, lineY);
+    ctx.lineTo(pitchLeft + pitchW, lineY);
+    ctx.moveTo(pitchLeft, ezTop);
+    ctx.lineTo(pitchLeft + pitchW, ezTop);
+    ctx.stroke();
+
+    // Letreiro 3D Gigante
+    ctx.save();
+    ctx.font = '900 36px var(--head), sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.fillText('⚽ GOLAÇO! ⚽', pitchLeft + pitchW / 2 + 3, ezTop + ezH * 0.45 + 3);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('⚽ GOLAÇO! ⚽', pitchLeft + pitchW / 2, ezTop + ezH * 0.45);
+    ctx.font = '900 20px var(--head), sans-serif';
+    ctx.fillStyle = '#fef08a';
+    ctx.fillText(`★ END ZONE • FASE ${currentStage} ★`, pitchLeft + pitchW / 2, ezTop + ezH * 0.78);
+    ctx.restore();
+
+    // Pylons laranjas nos 4 cantos
+    const pylonW = 10;
+    const pylonH = 14;
+    const drawPylon = (px, py) => {
+        ctx.fillStyle = '#f97316';
+        ctx.fillRect(px - pylonW / 2, py - pylonH / 2, pylonW, pylonH);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(px - pylonW / 2, py - pylonH / 2, pylonW, 4);
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(px - pylonW / 2, py - pylonH / 2, pylonW, pylonH);
+    };
+
+    drawPylon(pitchLeft, lineY);
+    drawPylon(pitchLeft + pitchW, lineY);
+    drawPylon(pitchLeft, ezTop);
+    drawPylon(pitchLeft + pitchW, ezTop);
+
     ctx.restore();
 }
 
@@ -2742,7 +3067,11 @@ function updateDefenders(dt) {
 
         // Colisão com o Jogador (ZAGUEIROS ATIVOS NUNCA FICAM FANTASMAS!)
         if (gameState === STATE.RUNNING) {
-            if (distToPlayer < player.radius + d.radius - 4) {
+            const hitDx = Math.abs(player.x - d.x);
+            const hitDy = Math.abs(player.y - d.y);
+            const isColliding = (hitDx < 26 && hitDy < 36) || (Math.hypot(hitDx, hitDy) < 32);
+
+            if (isColliding) {
                 if (superSpeedTimer > 0) {
                     d.state = 'KNOCKED_OUT';
                     d.stateTimer = 1.4;
@@ -2760,10 +3089,9 @@ function updateDefenders(dt) {
                     score += 250;
                     triggerHaptic('spin');
                 } else {
-                    // Qualquer contato com zagueiro que não foi nocauteado = FIM DE JOGO!
+                    // Qualquer contato com zagueiro que não foi nocauteado = TACKLE CARTOON!
                     if (d.state !== 'KNOCKED_OUT') {
-                        triggerHaptic('crash');
-                        triggerGameOver('O ZAGUEIRO DESARMOU VOCÊ!');
+                        triggerTackle(d);
                         return;
                     }
                 }
@@ -2773,19 +3101,27 @@ function updateDefenders(dt) {
         // Indicadores táticos em Slow-Mo (Estilo Touchdown Hero aos 00:34)
         if (isSlowMo) {
             ctx.save();
-            ctx.strokeStyle = 'rgba(239, 68, 68, 0.75)';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 4]);
+            // Anel tático sutil em giz tracejado
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+            ctx.lineWidth = 1.8;
+            ctx.setLineDash([4, 4]);
             ctx.beginPath();
-            ctx.arc(d.x, d.y, 38, 0, Math.PI * 2);
+            ctx.arc(d.x, d.y, 34, 0, Math.PI * 2);
             ctx.stroke();
 
-            // Marcador tático X vermelho
-            ctx.fillStyle = '#ef4444';
-            ctx.font = 'bold 16px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('✕', d.x, d.y - 40);
+            // Mira ✕ nítida em estêncil branco
+            const crossSize = 11;
+            ctx.setLineDash([]);
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3.5;
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+            ctx.shadowBlur = 4;
+            ctx.beginPath();
+            ctx.moveTo(d.x - crossSize, d.y - 36 - crossSize);
+            ctx.lineTo(d.x + crossSize, d.y - 36 + crossSize);
+            ctx.moveTo(d.x + crossSize, d.y - 36 - crossSize);
+            ctx.lineTo(d.x - crossSize, d.y - 36 + crossSize);
+            ctx.stroke();
             ctx.restore();
         }
 
@@ -2841,8 +3177,9 @@ function updatePlayer(dt) {
         const maxX = fieldWidth - fieldMargin - player.radius - 6;
         player.x = Math.max(minX, Math.min(maxX, player.x));
 
-        const minY = height * 0.16;
-        const maxY = height - player.radius - 20;
+        const anchorY = Math.round(height * 0.72);
+        const minY = anchorY - 60;
+        const maxY = anchorY + 30;
         player.y = Math.max(minY, Math.min(maxY, player.y));
 
         player.runCycle += 14 * dt * timeScale;
@@ -2870,6 +3207,39 @@ function updatePlayer(dt) {
             addGoldTrail(player.x, player.y);
         }
 
+        // Indicadores táticos do Craque em Slow-Mo (Prancheta Tática)
+        if (isSlowMo) {
+            ctx.save();
+            const t = performance.now() * 0.003;
+            const pulseR = 34 + Math.sin(t * 3) * 3;
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.75)';
+            ctx.lineWidth = 2.2;
+            ctx.shadowColor = 'rgba(56, 189, 248, 0.5)';
+            ctx.shadowBlur = 6;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, pulseR, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Anel interno tracejado giratório
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.lineWidth = 1.8;
+            ctx.setLineDash([5, 4]);
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, 24, t * 1.5, t * 1.5 + Math.PI * 2);
+            ctx.stroke();
+
+            // Seta tática para frente
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath();
+            ctx.moveTo(player.x, player.y - pulseR - 6);
+            ctx.lineTo(player.x - 5, player.y - pulseR + 1);
+            ctx.lineTo(player.x + 5, player.y - pulseR + 1);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+
         // Renderiza
         drawSoccerPlayer(ctx, player.x, player.y, {
             team: profile.getTeam(),
@@ -2884,6 +3254,18 @@ function updatePlayer(dt) {
         // Bola aos pés 3D
         const ballOffset = 22 + Math.sin(player.runCycle) * 3;
         drawBallSprite(ctx, player.x, player.y + ballOffset, 14, player.ballRot);
+    } else if (gameState === STATE.TACKLED) {
+        tackleTumbleAngle += 6 * dt;
+        drawSoccerPlayer(ctx, player.x, player.y, {
+            team: profile.getTeam(),
+            skin: profile.skin,
+            hair: profile.hair,
+            number: profile.number,
+            runCycle: 0,
+            rotation: Math.min(Math.PI / 2, tackleTumbleAngle),
+            isSliding: true
+        });
+        drawBallSprite(ctx, looseBall.x, looseBall.y, 14, looseBall.rot);
     } else if (gameState === STATE.PENALTY_RUNUP) {
         penRunUp += 3.6 * dt;
         player.runCycle += 18 * dt;
@@ -3470,17 +3852,14 @@ function updateSlowMoState(dt) {
             slowEnergy = 100;
             if (appEl) appEl.classList.remove('slowmo');
             if (slowFillEl) slowFillEl.style.width = '100%';
-            return;
-        }
-
-        if (!isHolding) {
+        } else if (!isHolding) {
             // SOLTOU O DEDO: Câmera Lenta ativada e o campo abre (zoom-out total)!
             if (slowEnergy > 4) {
                 isSlowMo = true;
-                timeScale = 0.28; // Bullet-time tenso
+                timeScale = 0.22; // Bullet-time tenso estilo Touchdown Hero
                 camera.targetZoom = (width / fieldWidth) * 0.94; // O campo abre completamente!
                 camera.targetX = fieldWidth / 2; // Centraliza a visão do estádio
-                camera.targetOffsetY = 85; // Visão tática à frente
+                camera.targetOffsetY = 70; // Visão tática à frente
                 slowEnergy -= getSlowDrainRate() * dt;
                 if (appEl) appEl.classList.add('slowmo');
 
@@ -3596,6 +3975,13 @@ function updateCooldowns(dt) {
 // =========================================================
 function update(dt) {
     if (gameState === STATE.RUNNING) {
+        if (!hasStartedRunning) {
+            updatePlayer(dt);
+            updateSlowMoState(dt);
+            updateParticles(dt);
+            return;
+        }
+
         const meterRate = (scrollSpeed * 0.22) * timeScale;
         stageDist += meterRate * dt;
         totalDist += meterRate * dt;
@@ -3618,6 +4004,17 @@ function update(dt) {
         spawnDefendersIfNeeded();
         updateDefenders(dt);
         updatePickups(dt);
+    } else if (gameState === STATE.TACKLED) {
+        tackleTimer -= dt;
+        looseBall.x += looseBall.vx * dt;
+        looseBall.y += looseBall.vy * dt;
+        looseBall.vy += 450 * dt;
+        looseBall.vx *= 0.98;
+        looseBall.rot += 12 * dt;
+        if (tackleTimer <= 0) {
+            triggerGameOver('O ZAGUEIRO DESARMOU VOCÊ!');
+            return;
+        }
     }
 
     updatePlayer(dt);
@@ -3653,11 +4050,12 @@ function gameLoop(timestamp) {
         ctx.translate(sx, sy);
     }
 
-    if (gameState === STATE.RUNNING) {
-        // Câmera 2D estilo Touchdown Hero: foca no jogador com zoom e panning horizontal
-        ctx.translate(width / 2, player.y);
+    if (gameState === STATE.RUNNING || gameState === STATE.TACKLED) {
+        const anchorY = Math.round(height * 0.72);
+        // Câmera 2D estilo Touchdown Hero: estável no eixo Y, zoom dinâmico e panning horizontal suave
+        ctx.translate(width / 2, anchorY);
         ctx.scale(camera.zoom, camera.zoom);
-        ctx.translate(-camera.x, -(player.y + camera.offsetY));
+        ctx.translate(-camera.x, -(anchorY + camera.offsetY));
     }
 
     ctx.clearRect(-width * 0.8, -height * 1.5, fieldWidth + width * 1.6, height * 3);
@@ -3678,6 +4076,18 @@ function gameLoop(timestamp) {
 // =========================================================
 // CONTROLES DE PARTIDA E TELAS
 // =========================================================
+function resetInputState() {
+    activeTouchId = null;
+    isTouching = false;
+    isMouseDown = false;
+    touchOriginX = 0;
+    touchOriginY = 0;
+    if (typeof player !== 'undefined' && player) {
+        playerOriginX = player.x;
+        playerOriginY = player.y;
+    }
+}
+
 function startGame() {
     audio.init();
     menuScreen.classList.add('hidden');
@@ -3687,6 +4097,8 @@ function startGame() {
     controlsEl.classList.remove('hidden');
     if (penaltyUiEl) penaltyUiEl.classList.add('hidden');
     appEl.classList.remove('pen', 'slowmo');
+
+    resetInputState();
 
     gameState = STATE.RUNNING;
     hasStartedRunning = false;
@@ -3700,9 +4112,16 @@ function startGame() {
     dribbles = 0;
     goals = 0;
     slowEnergy = 100;
+    isSlowMo = false;
+    wasSlowMo = false;
+    timeScale = 1.0;
     superSpeedTimer = 0;
     magnetTimer = 0;
     spinCooldown = 0;
+    isSpinning = false;
+    spinAngle = 0;
+    invulnerableTimer = 0;
+    screenShake = 0;
     scrollSpeed = 220;
     nextSpawnDist = 40;
 
@@ -3714,6 +4133,7 @@ function startGame() {
     progBallEl.style.left = '0%';
     scoreEl.textContent = '0';
     coinsEl.textContent = '0';
+    if (slowFillEl) slowFillEl.style.width = '100%';
 
     defenders = [];
     pickups = [];
@@ -3725,8 +4145,9 @@ function startGame() {
     if (comboPillEl) comboPillEl.classList.add('hidden');
     updateMissionProgress();
 
+    const anchorY = Math.round(height * 0.72);
     player.x = fieldWidth / 2;
-    player.y = height - 130;
+    player.y = anchorY;
     player.targetX = player.x;
     player.targetY = player.y;
 
@@ -3743,6 +4164,10 @@ function startGame() {
 function triggerGameOver(reason) {
     gameState = STATE.GAME_OVER;
     hasStartedRunning = false;
+    resetInputState();
+    timeScale = 1.0;
+    isSlowMo = false;
+    if (appEl) appEl.classList.remove('slowmo');
     if (kickoffHintEl) kickoffHintEl.classList.add('hidden');
     audio.playWhistle(true);
 
@@ -3772,6 +4197,10 @@ function triggerGameOver(reason) {
 function openMenu() {
     gameState = STATE.MENU;
     hasStartedRunning = false;
+    resetInputState();
+    timeScale = 1.0;
+    isSlowMo = false;
+    if (appEl) appEl.classList.remove('slowmo');
     if (kickoffHintEl) kickoffHintEl.classList.add('hidden');
     menuScreen.classList.remove('hidden');
     overScreen.classList.add('hidden');
@@ -3796,6 +4225,17 @@ let activeTouchId = null;
 canvas.addEventListener('touchstart', (e) => {
     audio.init();
     if (gameState === STATE.RUNNING) {
+        if (activeTouchId !== null) {
+            let stillActive = false;
+            for (let i = 0; i < e.touches.length; i++) {
+                if (e.touches[i].identifier === activeTouchId) {
+                    stillActive = true;
+                    break;
+                }
+            }
+            if (!stillActive) activeTouchId = null;
+        }
+
         if (activeTouchId === null && e.changedTouches.length > 0) {
             const t = e.changedTouches[0];
             activeTouchId = t.identifier;
@@ -3830,8 +4270,8 @@ canvas.addEventListener('touchmove', (e) => {
                 const z = camera.zoom || 1.0;
                 const dx = (t.clientX - touchOriginX) / z;
                 const dy = (t.clientY - touchOriginY) / z;
-                player.targetX = playerOriginX + dx * 1.15;
-                player.targetY = playerOriginY + dy * 1.15;
+                player.targetX = playerOriginX + dx * 1.35;
+                player.targetY = playerOriginY + dy * 0.45;
                 break;
             }
         }
@@ -3851,6 +4291,10 @@ canvas.addEventListener('touchend', (e) => {
                 isTouching = false;
                 break;
             }
+        }
+        if (e.touches && e.touches.length === 0) {
+            activeTouchId = null;
+            isTouching = false;
         }
     } else if (gameState === STATE.PENALTY_AIM && isPenFlicking && penFlickTrail.length > 1) {
         isPenFlicking = false;
@@ -3873,6 +4317,17 @@ canvas.addEventListener('touchend', (e) => {
             executeSwipeKick(end.x, flickSpeed, curve);
         }
     }
+});
+
+window.addEventListener('touchend', (e) => {
+    if (e.touches && e.touches.length === 0) {
+        activeTouchId = null;
+        isTouching = false;
+    }
+});
+window.addEventListener('touchcancel', () => {
+    activeTouchId = null;
+    isTouching = false;
 });
 
 // Suporte com Mouse
@@ -3907,8 +4362,8 @@ window.addEventListener('mousemove', (e) => {
         const z = camera.zoom || 1.0;
         const dx = (e.clientX - touchOriginX) / z;
         const dy = (e.clientY - touchOriginY) / z;
-        player.targetX = playerOriginX + dx * 1.15;
-        player.targetY = playerOriginY + dy * 1.15;
+        player.targetX = playerOriginX + dx * 1.35;
+        player.targetY = playerOriginY + dy * 0.45;
     } else if (gameState === STATE.PENALTY_AIM && isPenFlicking) {
         const rect = canvas.getBoundingClientRect();
         const px = e.clientX - rect.left;
